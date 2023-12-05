@@ -25,6 +25,11 @@ type Renamable interface {
 	Renames() map[string]string
 }
 
+// Documented lets the user provide docstrings for module functions.
+type Documented interface {
+	Docstrings() map[string]string
+}
+
 // This is a little weird, but it's a workaround to allow us to simplify the
 // public API for setting up named parameters.
 type nameable interface {
@@ -484,6 +489,7 @@ func getFunctionTypes(f reflect.Value) (in, out []reflect.Type, err error) {
 
 func (v *VM) registerCallback(
 	name string,
+	docstring string,
 	source interface{},
 	callback reflect.Value,
 ) error {
@@ -515,8 +521,8 @@ func (v *VM) registerCallback(
 		return err
 	}
 	call := CallString(fmt.Sprintf(`
-(def %s (fn %s))
-`, name, prototype))
+(defn %s "%s" %s)
+`, name, docstring, prototype))
 	call.Options.UpdateEnv = true
 	err = v.ExecuteCall(context.Background(), nil, call)
 	if err != nil {
@@ -526,8 +532,13 @@ func (v *VM) registerCallback(
 	return nil
 }
 
-func (v *VM) Callback(name string, callback interface{}) error {
-	return v.registerCallback(name, nil, reflect.ValueOf(callback))
+func (v *VM) Callback(name string, docstring string, callback interface{}) error {
+	return v.registerCallback(
+		name,
+		docstring,
+		nil,
+		reflect.ValueOf(callback),
+	)
 }
 
 func (v *VM) Module(name string, module interface{}) error {
@@ -542,21 +553,27 @@ func (v *VM) Module(name string, module interface{}) error {
 	}
 
 	type_ = reflect.TypeOf(module)
-	renamable, haveCustom := module.(Renamable)
+	renamable, haveRenames := module.(Renamable)
+	docs := make(map[string]string)
+	if documented, ok := module.(Documented); ok {
+		docs = documented.Docstrings()
+	}
 
 	for i := 0; i < type_.NumMethod(); i++ {
 		method := type_.Method(i)
 		methodName := strcase.ToKebab(method.Name)
 
-		if haveCustom && methodName == "renames" {
+		if haveRenames && methodName == "renames" {
 			continue
 		}
 
-		if haveCustom {
+		if haveRenames {
 			if replaced, ok := renamable.Renames()[method.Name]; ok {
 				methodName = replaced
 			}
 		}
+
+		docstring, _ := docs[method.Name]
 
 		err := v.registerCallback(
 			fmt.Sprintf(
@@ -564,6 +581,7 @@ func (v *VM) Module(name string, module interface{}) error {
 				name,
 				methodName,
 			),
+			docstring,
 			module,
 			method.Func,
 		)

@@ -47,7 +47,7 @@ func main() {
 			panic(err)
 		}
 
-		err = cy.Callback("cy/env", func() *janet.Value {
+		err = cy.Callback("cy/env", "", func() *janet.Value {
 			return cy.Env().Value
 		})
 		if err != nil {
@@ -55,7 +55,7 @@ func main() {
 		}
 
 		symbols := make([]Symbol, 0)
-		cy.Callback("cy/doc", func(name string, docstring string, link string, macro bool) {
+		cy.Callback("cy/doc", "", func(name string, docstring string, link string, macro bool) {
 			symbols = append(symbols, Symbol{
 				Name:      name,
 				Docstring: docstring,

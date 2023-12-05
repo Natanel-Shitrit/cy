@@ -270,7 +270,7 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 	}
 
 	for name, callback := range callbacks {
-		err := vm.Callback(name, callback)
+		err := vm.Callback(name, "", callback)
 		if err != nil {
 			return nil, err
 		}
