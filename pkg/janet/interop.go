@@ -523,9 +523,36 @@ func (v *VM) registerCallback(
 	if err != nil {
 		return err
 	}
-	call := CallString(fmt.Sprintf(`
-(defn %s "%s" %s)
-`, name, docstring, prototype))
+
+	docstring = strings.TrimSpace(docstring)
+
+	format := "(defn %s %s %s)"
+
+	// You can provide a custom method prototype by providing a docstring
+	// that begins with "([method name]"
+	// This stops Janet from auto-generating a prototype for your
+	// docstring, which is desirable because there is no way to detect
+	// argument names using reflection
+	if strings.HasPrefix(docstring, "("+name) {
+		format = "(def %s %s (fn %s))"
+	}
+
+	if len(docstring) > 0 {
+		// Janet lets you enclose string literals enclosed by as many `
+		// characters as you like; this is a lazy way of "escaping" the
+		// docstring
+		docstring = "`````" + docstring + "`````"
+	} else {
+		docstring = `""`
+	}
+
+	str := fmt.Sprintf(
+		format,
+		name,
+		docstring,
+		prototype,
+	)
+	call := CallString(str)
 	call.Options.UpdateEnv = true
 	err = v.ExecuteCall(context.Background(), nil, call)
 	if err != nil {
