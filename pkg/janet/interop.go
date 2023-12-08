@@ -20,14 +20,11 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// Allow the user to rename struct methods arbitrarily.
+// Renamable provides a mapping from Go method names to Janet function names.
+// This is useful for declaring Janet functions that are not valid Go, such as
+// "boolean?".
 type Renamable interface {
 	Renames() map[string]string
-}
-
-// Documented lets the user provide docstrings for module functions.
-type Documented interface {
-	Docstrings() map[string]string
 }
 
 // This is a little weird, but it's a workaround to allow us to simplify the
@@ -555,8 +552,12 @@ func (v *VM) Module(name string, module interface{}) error {
 	type_ = reflect.TypeOf(module)
 	renamable, haveRenames := module.(Renamable)
 	docs := make(map[string]string)
+	if docstrings, ok := module.(Docstrings); ok {
+		docs = docstrings.Docstrings()
+	}
+
 	if documented, ok := module.(Documented); ok {
-		docs = documented.Docstrings()
+		docs = parseDocstrings(documented.Documentation())
 	}
 
 	for i := 0; i < type_.NumMethod(); i++ {

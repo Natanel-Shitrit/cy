@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	_ "embed"
 
 	cyParams "github.com/cfoust/cy/pkg/cy/params"
 	"github.com/cfoust/cy/pkg/fuzzy"
@@ -13,6 +14,9 @@ import (
 	"github.com/cfoust/cy/pkg/mux/screen/tree"
 	"github.com/cfoust/cy/pkg/util"
 )
+
+//go:embed docs-input.md
+var INPUT_DOCS string
 
 type InputModule struct {
 	Lifetime util.Lifetime
@@ -25,6 +29,10 @@ type FuzzyParams struct {
 	Full     bool
 	Reverse  bool
 	Animated *bool
+}
+
+func (i *InputModule) Documentation() string {
+	return INPUT_DOCS
 }
 
 func (i *InputModule) Find(
