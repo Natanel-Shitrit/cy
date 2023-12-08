@@ -2,8 +2,8 @@ package api
 
 import (
 	"context"
-	"fmt"
 	_ "embed"
+	"fmt"
 
 	cyParams "github.com/cfoust/cy/pkg/cy/params"
 	"github.com/cfoust/cy/pkg/fuzzy"
@@ -15,8 +15,8 @@ import (
 	"github.com/cfoust/cy/pkg/util"
 )
 
-//go:embed docs-input.md
-var INPUT_DOCS string
+//go:embed docs-input-find.md
+var DOCS_INPUT_FIND string
 
 type InputModule struct {
 	Lifetime util.Lifetime
@@ -31,8 +31,12 @@ type FuzzyParams struct {
 	Animated *bool
 }
 
-func (i *InputModule) Documentation() string {
-	return INPUT_DOCS
+var _ janet.Docstrings = (*InputModule)(nil)
+
+func (i *InputModule) Docstrings() map[string]string {
+	return map[string]string{
+		"Find": DOCS_INPUT_FIND,
+	}
 }
 
 func (i *InputModule) Find(

@@ -79,7 +79,7 @@ func main() {
 		output += "## Index\n\n"
 		for _, symbol := range symbols {
 			header := strings.Map(func(r rune) rune {
-				if r == '/' {
+				if r == '/' || r == '?' {
 					return -1
 				}
 

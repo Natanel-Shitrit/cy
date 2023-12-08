@@ -27,6 +27,12 @@ type Renamable interface {
 	Renames() map[string]string
 }
 
+// Docstrings provides docstrings for module methods. This is a mapping from
+// the method's Go name to its Janet docstring.
+type Docstrings interface {
+	Docstrings() map[string]string
+}
+
 // This is a little weird, but it's a workaround to allow us to simplify the
 // public API for setting up named parameters.
 type nameable interface {
@@ -556,15 +562,15 @@ func (v *VM) Module(name string, module interface{}) error {
 		docs = docstrings.Docstrings()
 	}
 
-	if documented, ok := module.(Documented); ok {
-		docs = parseDocstrings(documented.Documentation())
-	}
-
 	for i := 0; i < type_.NumMethod(); i++ {
 		method := type_.Method(i)
 		methodName := strcase.ToKebab(method.Name)
 
 		if haveRenames && methodName == "renames" {
+			continue
+		}
+
+		if methodName == "docstrings" {
 			continue
 		}
 

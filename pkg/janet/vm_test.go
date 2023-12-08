@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -286,25 +285,4 @@ func TestVM(t *testing.T) {
 		err = vm.unmarshal(value, &foo)
 		require.Error(t, err)
 	})
-}
-
-func TestDocs(t *testing.T) {
-	result := parseDocstrings(`
-# test
-
-foo
-
-# test2
-
-bar
-
-baz
-
-`)
-	test, ok := result["test"]
-	require.True(t, ok)
-	require.Equal(t, "foo", strings.TrimSpace(test))
-	test2, ok := result["test2"]
-	require.True(t, ok)
-	require.Equal(t, "bar\n\nbaz", strings.TrimSpace(test2))
 }
