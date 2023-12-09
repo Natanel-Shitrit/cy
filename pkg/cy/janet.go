@@ -12,12 +12,17 @@ import (
 	"github.com/cfoust/cy/pkg/mux/screen/toasts"
 	"github.com/cfoust/cy/pkg/mux/screen/tree"
 	"github.com/cfoust/cy/pkg/util"
+
+	"github.com/rs/zerolog"
 )
 
 import _ "embed"
 
 //go:embed cy-boot.janet
 var CY_BOOT_FILE []byte
+
+//go:embed docs-cy.md
+var DOCS_CY string
 
 // execute runs some Janet code on behalf of the Client. This is only used in testing.
 func (c *Client) execute(code string) error {
@@ -52,6 +57,184 @@ func resolveLevel(level *janet.Value) (toasts.ToastLevel, error) {
 	return toasts.ToastLevelError, fmt.Errorf("you must provide one of :info, :warn, or :error")
 }
 
+type CyModule struct {
+	cy *Cy
+}
+
+var _ janet.Documented = (*CyModule)(nil)
+
+func (i *CyModule) Documentation() string {
+	return DOCS_CY
+}
+
+func (c *CyModule) KillServer() {
+	c.cy.Shutdown()
+}
+
+func (c *CyModule) Detach(user interface{}) {
+	client, ok := user.(*Client)
+	if !ok {
+		return
+	}
+
+	client.Detach("detached")
+}
+
+func (c *CyModule) Get(user interface{}, key *janet.Value) (interface{}, error) {
+	defer key.Free()
+
+	var keyword janet.Keyword
+	err := key.Unmarshal(&keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	client, ok := user.(*Client)
+	if !ok {
+		return nil, fmt.Errorf("missing client context")
+	}
+
+	// First check the client's parameters
+	value, ok := client.params.Get(string(keyword))
+	if ok {
+		return value, nil
+	}
+
+	// Then those found in the tree
+	node := client.Node()
+	if node == nil {
+		return nil, fmt.Errorf("client was not attached")
+	}
+
+	value, ok = node.Params().Get(string(keyword))
+	return value, nil
+}
+
+func (c *CyModule) Set(user interface{}, key *janet.Value, value *janet.Value) error {
+	defer key.Free()
+
+	client, ok := user.(*Client)
+	if !ok {
+		return fmt.Errorf("missing client context")
+	}
+
+	node := client.Node()
+	if node == nil {
+		return fmt.Errorf("client was not attached")
+	}
+
+	var keyword janet.Keyword
+	err := key.Unmarshal(&keyword)
+	if err != nil {
+		return err
+	}
+
+	var str string
+	err = value.Unmarshal(&str)
+	if err == nil {
+		node.Params().Set(string(keyword), str)
+		return nil
+	}
+
+	var _int int
+	err = value.Unmarshal(&_int)
+	if err == nil {
+		node.Params().Set(string(keyword), _int)
+		return nil
+	}
+
+	var _bool int
+	err = value.Unmarshal(&_bool)
+	if err == nil {
+		node.Params().Set(string(keyword), _bool)
+		return nil
+	}
+
+	return fmt.Errorf("parameter type not supported")
+}
+
+func (c *CyModule) Replay(user interface{}) {
+	client, ok := user.(*Client)
+	if !ok {
+		return
+	}
+
+	node := client.Node()
+	if node == nil {
+		return
+	}
+
+	pane, ok := node.(*tree.Pane)
+	if !ok {
+		return
+	}
+
+	r, ok := pane.Screen().(*replayable.Replayable)
+	if !ok {
+		return
+	}
+
+	r.EnterReplay()
+	// TODO(cfoust): 10/08/23 reattach all clients
+	client.Attach(node)
+}
+
+func (c *CyModule) Paste(user interface{}) {
+	client, ok := user.(*Client)
+	if !ok {
+		return
+	}
+
+	buffer := client.buffer
+	if len(buffer) == 0 {
+		return
+	}
+
+	client.binds.Input([]byte(buffer))
+}
+
+func (c *CyModule) Toast(context interface{}, level *janet.Value, message string) error {
+	defer level.Free()
+
+	toastLevel, err := resolveLevel(level)
+	if err != nil {
+		return err
+	}
+
+	client, ok := context.(*Client)
+	if !ok {
+		return fmt.Errorf("unable to detect client")
+	}
+
+	client.toaster.Send(toasts.Toast{
+		Level:   toastLevel,
+		Message: message,
+	})
+	return nil
+}
+
+func (c *CyModule) Log(level *janet.Value, text string) error {
+	defer level.Free()
+
+	levelValue, err := resolveLevel(level)
+	if err != nil {
+		return err
+	}
+
+	var logLevel zerolog.Level = zerolog.InfoLevel
+	switch levelValue {
+	case toasts.ToastLevelInfo:
+		logLevel = zerolog.InfoLevel
+	case toasts.ToastLevelWarn:
+		logLevel = zerolog.WarnLevel
+	case toasts.ToastLevelError:
+		logLevel = zerolog.ErrorLevel
+	}
+
+	c.cy.log.WithLevel(logLevel).Msgf(text)
+	return nil
+}
+
 func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 	vm, err := janet.New(ctx)
 	if err != nil {
@@ -64,6 +247,7 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 			Tree:        c.tree,
 			ReplayBinds: c.replayBinds,
 		},
+		"cy": &CyModule{cy: c},
 		"key": &api.Key{
 			Tree:        c.tree,
 			ReplayBinds: c.replayBinds,
@@ -91,129 +275,6 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 	}
 
 	callbacks := map[string]interface{}{
-		"cy/kill-server": func() {
-			c.Shutdown()
-		},
-		"cy/detach": func(user interface{}) {
-			client, ok := user.(*Client)
-			if !ok {
-				return
-			}
-
-			client.Detach("detached")
-		},
-		"cy/get": func(user interface{}, key *janet.Value) (interface{}, error) {
-			defer key.Free()
-
-			var keyword janet.Keyword
-			err := key.Unmarshal(&keyword)
-			if err != nil {
-				return nil, err
-			}
-
-			client, ok := user.(*Client)
-			if !ok {
-				return nil, fmt.Errorf("missing client context")
-			}
-
-			// First check the client's parameters
-			value, ok := client.params.Get(string(keyword))
-			if ok {
-				return value, nil
-			}
-
-			// Then those found in the tree
-			node := client.Node()
-			if node == nil {
-				return nil, fmt.Errorf("client was not attached")
-			}
-
-			value, ok = node.Params().Get(string(keyword))
-			return value, nil
-		},
-		"cy/set": func(user interface{}, key *janet.Value, value *janet.Value) error {
-			defer key.Free()
-
-			client, ok := user.(*Client)
-			if !ok {
-				return fmt.Errorf("missing client context")
-			}
-
-			node := client.Node()
-			if node == nil {
-				return fmt.Errorf("client was not attached")
-			}
-
-			var keyword janet.Keyword
-			err := key.Unmarshal(&keyword)
-			if err != nil {
-				return err
-			}
-
-			var str string
-			err = value.Unmarshal(&str)
-			if err == nil {
-				node.Params().Set(string(keyword), str)
-				return nil
-			}
-
-			var _int int
-			err = value.Unmarshal(&_int)
-			if err == nil {
-				node.Params().Set(string(keyword), _int)
-				return nil
-			}
-
-			var _bool int
-			err = value.Unmarshal(&_bool)
-			if err == nil {
-				node.Params().Set(string(keyword), _bool)
-				return nil
-			}
-
-			return fmt.Errorf("parameter type not supported")
-		},
-		"cy/replay": func(user interface{}) {
-			client, ok := user.(*Client)
-			if !ok {
-				return
-			}
-
-			node := client.Node()
-			if node == nil {
-				return
-			}
-
-			pane, ok := node.(*tree.Pane)
-			if !ok {
-				return
-			}
-
-			r, ok := pane.Screen().(*replayable.Replayable)
-			if !ok {
-				return
-			}
-
-			r.EnterReplay()
-			// TODO(cfoust): 10/08/23 reattach all clients
-			client.Attach(node)
-		},
-		"cy/paste": func(user interface{}) {
-			client, ok := user.(*Client)
-			if !ok {
-				return
-			}
-
-			buffer := client.buffer
-			if len(buffer) == 0 {
-				return
-			}
-
-			client.binds.Input([]byte(buffer))
-		},
-		"log": func(text string) {
-			c.log.Info().Msgf(text)
-		},
 		"frame/size": func(context interface{}) *geom.Vec2 {
 			client, ok := context.(*Client)
 			if !ok {
@@ -247,25 +308,6 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 				names = append(names, name)
 			}
 			return names
-		},
-		"cy/toast": func(context interface{}, level *janet.Value, message string) error {
-			defer level.Free()
-
-			toastLevel, err := resolveLevel(level)
-			if err != nil {
-				return err
-			}
-
-			client, ok := context.(*Client)
-			if !ok {
-				return fmt.Errorf("unable to detect client")
-			}
-
-			client.toaster.Send(toasts.Toast{
-				Level:   toastLevel,
-				Message: message,
-			})
-			return nil
 		},
 	}
 
