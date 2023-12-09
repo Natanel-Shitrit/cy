@@ -541,18 +541,18 @@ func (v *VM) registerCallback(
 		// Janet lets you enclose string literals enclosed by as many `
 		// characters as you like; this is a lazy way of "escaping" the
 		// docstring
-		docstring = "`````" + docstring + "`````"
+		docstring = "`````" + docstring + "\n`````"
 	} else {
 		docstring = `""`
 	}
 
-	str := fmt.Sprintf(
+	code := fmt.Sprintf(
 		format,
 		name,
 		docstring,
 		prototype,
 	)
-	call := CallString(str)
+	call := CallString(code)
 	call.Options.UpdateEnv = true
 	err = v.ExecuteCall(context.Background(), nil, call)
 	if err != nil {

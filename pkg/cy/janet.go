@@ -282,7 +282,7 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 		Options:    janet.DEFAULT_CALL_OPTIONS,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute cy-boot.janet: %s", err.Error())
 	}
 
 	return vm, nil
