@@ -15,8 +15,8 @@ import (
 	"github.com/cfoust/cy/pkg/util"
 )
 
-//go:embed docs-input-find.md
-var DOCS_INPUT_FIND string
+//go:embed docs-input.md
+var DOCS_INPUT string
 
 type InputModule struct {
 	Lifetime util.Lifetime
@@ -31,12 +31,10 @@ type FuzzyParams struct {
 	Animated *bool
 }
 
-var _ janet.Docstrings = (*InputModule)(nil)
+var _ janet.Documented = (*InputModule)(nil)
 
-func (i *InputModule) Docstrings() map[string]string {
-	return map[string]string{
-		"Find": DOCS_INPUT_FIND,
-	}
+func (i *InputModule) Documentation() string {
+	return DOCS_INPUT
 }
 
 func (i *InputModule) Find(

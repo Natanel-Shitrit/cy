@@ -1,3 +1,5 @@
+# doc: Find
+
 (input/find inputs &named prompt full reverse animated)
 
 `(input/find)` is a general-purpose fuzzy finder that is similar to `fzf`. When invoked, it prompts the user to choose from one of the items provided in `inputs`. `(input/find)` does not return until the user makes a choice; if they choose nothing (such as by hitting `ctrl+c`), it returns `nil`.

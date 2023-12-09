@@ -585,19 +585,19 @@ func (v *VM) Module(name string, module interface{}) error {
 	type_ = reflect.TypeOf(module)
 	renamable, haveRenames := module.(Renamable)
 	docs := make(map[string]string)
+
 	if docstrings, ok := module.(Docstrings); ok {
 		docs = docstrings.Docstrings()
+	}
+	if documented, ok := module.(Documented); ok {
+		docs = parseDocstrings(documented.Documentation())
 	}
 
 	for i := 0; i < type_.NumMethod(); i++ {
 		method := type_.Method(i)
 		methodName := strcase.ToKebab(method.Name)
 
-		if haveRenames && methodName == "renames" {
-			continue
-		}
-
-		if methodName == "docstrings" {
+		if (haveRenames && methodName == "renames") || methodName == "docstrings" || methodName == "documentation" {
 			continue
 		}
 
