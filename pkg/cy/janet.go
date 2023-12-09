@@ -248,7 +248,7 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 			ReplayBinds: c.replayBinds,
 		},
 		"cy": &CyModule{cy: c},
-		"key": &api.Key{
+		"key": &api.KeyModule{
 			Tree:        c.tree,
 			ReplayBinds: c.replayBinds,
 		},

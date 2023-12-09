@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/cfoust/cy/pkg/bind"
-	"github.com/cfoust/cy/pkg/janet"
 	"github.com/cfoust/cy/pkg/mux/screen/replay"
 	"github.com/cfoust/cy/pkg/mux/screen/tree"
 	"github.com/cfoust/cy/pkg/sessions"
@@ -14,19 +13,10 @@ import (
 	"github.com/cfoust/cy/pkg/util"
 )
 
-//go:embed docs-replay.md
-var DOCS_REPLAY string
-
 type ReplayModule struct {
 	Lifetime util.Lifetime
 	Tree     *tree.Tree
 	Binds    *bind.BindScope
-}
-
-var _ janet.Documented = (*ReplayModule)(nil)
-
-func (i *ReplayModule) Documentation() string {
-	return DOCS_REPLAY
 }
 
 func (m *ReplayModule) send(context interface{}, msg taro.Msg) error {

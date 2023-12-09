@@ -76,7 +76,7 @@ func main() {
 		var output string
 
 		// Generate the table of contents
-		output += "## Index\n\n"
+		output += "## Functions\n\n"
 		for _, symbol := range symbols {
 			header := strings.Map(func(r rune) rune {
 				if r == '/' || r == '?' {

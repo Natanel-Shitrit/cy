@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 
 	cyParams "github.com/cfoust/cy/pkg/cy/params"
@@ -15,9 +14,6 @@ import (
 	"github.com/cfoust/cy/pkg/util"
 )
 
-//go:embed docs-input.md
-var DOCS_INPUT string
-
 type InputModule struct {
 	Lifetime util.Lifetime
 	Tree     *tree.Tree
@@ -29,12 +25,6 @@ type FuzzyParams struct {
 	Full     bool
 	Reverse  bool
 	Animated *bool
-}
-
-var _ janet.Documented = (*InputModule)(nil)
-
-func (i *InputModule) Documentation() string {
-	return DOCS_INPUT
 }
 
 func (i *InputModule) Find(
