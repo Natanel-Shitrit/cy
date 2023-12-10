@@ -68,3 +68,12 @@ var _ janet.Documented = (*TreeModule)(nil)
 func (i *TreeModule) Documentation() string {
 	return DOCS_TREE
 }
+
+//go:embed docs-viewport.md
+var DOCS_VIEWPORT string
+
+var _ janet.Documented = (*ViewportModule)(nil)
+
+func (i *ViewportModule) Documentation() string {
+	return DOCS_VIEWPORT
+}

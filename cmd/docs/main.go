@@ -142,7 +142,7 @@ func main() {
 		output := "\n---\n"
 
 		for _, frame := range frames {
-			set := fmt.Sprintf("```janet\n(frame/set \"%s\")\n```\n", frame)
+			set := fmt.Sprintf("```janet\n(viewport/set-frame \"%s\")\n```\n", frame)
 			output += fmt.Sprintf(`
 #### %s
 

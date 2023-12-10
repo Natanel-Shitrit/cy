@@ -98,46 +98,46 @@
 (key/def
   cy/toggle-margins
   "toggle margins"
-  (def size (frame/size))
+  (def size (viewport/size))
   (case (+ (size 0) (size 1))
-    0 (frame/set-size [0 80])
-    (frame/set-size [0 0])))
+    0 (viewport/set-size [0 80])
+    (viewport/set-size [0 0])))
 
 (key/def
   cy/margins-80
   "set size to 80 columns"
-  (frame/set-size [0 80]))
+  (viewport/set-size [0 80]))
 
 (key/def
   cy/margins-160
   "set size to 160 columns"
-  (frame/set-size [0 160]))
+  (viewport/set-size [0 160]))
 
 (key/def
   cy/choose-frame
   "choose a frame"
-  (as?-> (frame/get-all) _
+  (as?-> (viewport/get-frames) _
          (input/find _ :prompt "search: frame")
-         (frame/set _)))
+         (viewport/set-frame _)))
 
 (key/def
   cy/random-frame
   "switch to a random frame"
-  (def frames (frame/get-all))
+  (def frames (viewport/get-frames))
   (def rng (math/rng))
-  (frame/set (get frames (math/rng-int rng (length frames)))))
+  (viewport/set-frame (get frames (math/rng-int rng (length frames)))))
 
 (key/def
   cy/margins-smaller
   "decrease margins by 5 columns"
-  (def [lines cols] (frame/size))
-  (frame/set-size [lines (+ cols 10)]))
+  (def [lines cols] (viewport/size))
+  (viewport/set-size [lines (+ cols 10)]))
 
 (key/def
   cy/margins-bigger
   "increase margins by 5 columns"
-  (def [lines cols] (frame/size))
-  (frame/set-size [lines (- cols 10)]))
+  (def [lines cols] (viewport/size))
+  (viewport/set-size [lines (- cols 10)]))
 
 (key/def
   cy/open-log

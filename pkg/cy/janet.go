@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/cfoust/cy/pkg/cy/api"
-	"github.com/cfoust/cy/pkg/frames"
-	"github.com/cfoust/cy/pkg/geom"
 	"github.com/cfoust/cy/pkg/janet"
 	"github.com/cfoust/cy/pkg/mux/screen/replayable"
 	"github.com/cfoust/cy/pkg/mux/screen/toasts"
@@ -253,6 +251,7 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 			ReplayBinds: c.replayBinds,
 		},
 		"group": &api.GroupModule{Tree: c.tree},
+		"input": &api.InputModule{Tree: c.tree, Server: c.muxServer},
 		"pane":  &api.PaneModule{Tree: c.tree},
 		"path":  &api.PathModule{},
 		"replay": &api.ReplayModule{
@@ -260,59 +259,12 @@ func (c *Cy) initJanet(ctx context.Context) (*janet.VM, error) {
 			Tree:     c.tree,
 			Binds:    c.replayBinds,
 		},
-		"tree": &api.TreeModule{Tree: c.tree},
-		"input": &api.InputModule{
-			Tree:   c.tree,
-			Server: c.muxServer,
-		},
+		"tree":     &api.TreeModule{Tree: c.tree},
+		"viewport": &api.ViewportModule{},
 	}
 
 	for name, module := range modules {
 		err := vm.Module(name, module)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	callbacks := map[string]interface{}{
-		"frame/size": func(context interface{}) *geom.Vec2 {
-			client, ok := context.(*Client)
-			if !ok {
-				return nil
-			}
-			size := client.margins.Size()
-			return &size
-		},
-		"frame/set-size": func(context interface{}, size geom.Size) {
-			client, ok := context.(*Client)
-			if !ok {
-				return
-			}
-			client.margins.SetSize(size)
-		},
-		"frame/set": func(context interface{}, name string) {
-			client, ok := context.(*Client)
-			if !ok {
-				return
-			}
-
-			frame, ok := frames.Frames[name]
-			if !ok {
-				return
-			}
-			client.frame.Set(frame)
-		},
-		"frame/get-all": func(context interface{}) []string {
-			var names []string
-			for name := range frames.Frames {
-				names = append(names, name)
-			}
-			return names
-		},
-	}
-
-	for name, callback := range callbacks {
-		err := vm.Callback(name, "", callback)
 		if err != nil {
 			return nil, err
 		}
